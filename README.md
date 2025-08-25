@@ -1,4 +1,6 @@
-# Todoist-Things Sync Engine
+# Musubi Sync Engine
+
+**Musubi (結び)** - *"knot, connection, binding"* - A spiritual connection that binds your tasks across platforms.
 
 A powerful Cloudflare Worker that enables automatic three-way synchronization between Todoist, Things 3, and Obsidian.
 
@@ -52,8 +54,8 @@ This is the core sync engine that runs on Cloudflare Workers, providing real-tim
 
 ```bash
 # Clone the repository
-git clone https://github.com/thalysguimaraes/todoist-things-sync-engine.git
-cd todoist-things-sync-engine
+git clone https://github.com/thalysguimaraes/musubi-sync-engine.git
+cd musubi-sync-engine
 
 # Install dependencies
 npm install
@@ -102,8 +104,8 @@ npm run deploy
 
 ## Related Projects
 
-- [obsidian-sync-plugin](https://github.com/thalysguimaraes/obsidian-sync-plugin) - Obsidian plugin for three-way sync
-- [sync-tui](https://github.com/thalysguimaraes/sync-tui) - Terminal UI for managing sync
+- [musubi-obsidian-plugin](https://github.com/thalysguimaraes/musubi-obsidian-plugin) - Obsidian plugin for three-way sync
+- [musubi-tui](https://github.com/thalysguimaraes/musubi-tui) - Terminal UI for managing sync
 
 ## License
 

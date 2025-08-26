@@ -292,7 +292,8 @@ export default {
       if (path === '/inbox' && request.method === 'GET') {
         // Get tasks, excluding already synced ones by default
         const includeAll = url.searchParams.get('include_all') === 'true';
-        const tasks = await todoist.getInboxTasks(!includeAll, env.SYNC_METADATA);
+        const includeCompleted = url.searchParams.get('include_completed') === 'true';
+        const tasks = await todoist.getInboxTasks(!includeAll, env.SYNC_METADATA, includeCompleted);
         
         // Record metric for inbox fetch
         await metrics.recordMetric({

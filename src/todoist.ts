@@ -87,14 +87,15 @@ export class TodoistClient {
     return inbox;
   }
 
-  async getInboxTasks(excludeSynced: boolean = true, kv?: KVNamespace): Promise<TodoistTask[]> {
+  async getInboxTasks(excludeSynced: boolean = true, kv?: KVNamespace, includeCompleted: boolean = false): Promise<TodoistTask[]> {
     const inboxProject = await this.getInboxProject();
     if (!inboxProject) {
       throw new Error('Inbox project not found');
     }
 
     const tasks = await this.request<TodoistTask[]>(`/tasks?project_id=${inboxProject.id}`);
-    let activeTasks = tasks.filter(task => !task.is_completed);
+    // Optionally include completed tasks
+    let activeTasks = includeCompleted ? tasks : tasks.filter(task => !task.is_completed);
     
     // First, filter by label - this is free and doesn't use KV
     if (excludeSynced) {

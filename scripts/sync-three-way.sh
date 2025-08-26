@@ -51,10 +51,10 @@ log "  Things: $things_count tasks"
 # Get Obsidian tasks (estimate)
 log "  Obsidian: Tasks tracked in vault"
 
-# STEP 2: Run the existing bidirectional sync (Todoist ↔ Things)
+# STEP 2: Sync active tasks between Todoist and Things
 log ""
-log "Step 2: Syncing Todoist ↔ Things..."
-"${SCRIPT_DIR}/sync-bidirectional.sh" > /dev/null 2>&1
+log "Step 2: Syncing active tasks between Todoist ↔ Things..."
+# Active task sync is handled by the import/export steps below
 
 # STEP 3: Sync Todoist → Things (Import missing tasks)
 log ""
@@ -111,9 +111,35 @@ if [ -n "$all_things_tasks" ] && [ "$all_things_tasks" != "[]" ]; then
     log "  Things → Todoist: $created created, $existing already existed"
 fi
 
-# STEP 5: Sync with Obsidian (if plugin is configured)
+# STEP 5: Sync completed tasks from Todoist → Things
 log ""
-log "Step 5: Syncing with Obsidian..."
+log "Step 5: Syncing completed tasks from Todoist..."
+
+# Get completed tasks from Todoist
+completed_todoist=$(curl -s "${WORKER_URL}/inbox?include_all=true&include_completed=true&format=flat")
+completed_only=$(echo "$completed_todoist" | jq '[.[] | select(.is_completed == true)]')
+completed_count=$(echo "$completed_only" | jq '. | length')
+
+if [ "$completed_count" -gt 0 ]; then
+    log "  Found $completed_count completed tasks in Todoist"
+    
+    # Extract Things IDs of completed tasks
+    things_ids_to_complete=$(echo "$completed_only" | jq -r '[.[] | select(.thingsId != null) | .thingsId]')
+    
+    if [ "$things_ids_to_complete" != "[]" ]; then
+        # Mark tasks as completed in Things
+        complete_result=$(osascript "${SCRIPT_DIR}/mark-things-completed.applescript" "$things_ids_to_complete" 2>&1)
+        log "  $complete_result"
+    else
+        log "  No mapped tasks to mark as completed in Things"
+    fi
+else
+    log "  No completed tasks to sync from Todoist"
+fi
+
+# STEP 6: Sync with Obsidian (if plugin is configured)
+log ""
+log "Step 6: Syncing with Obsidian..."
 
 # Check if Obsidian sync is configured
 obsidian_configured=$(curl -s "${WORKER_URL}/obsidian/status" 2>/dev/null | jq -r '.configured // false')
@@ -137,9 +163,28 @@ else
     log "  Obsidian sync not configured (use Obsidian plugin)"
 fi
 
-# STEP 6: Final verification
+# STEP 7: Sync completed tasks from Things → Todoist
 log ""
-log "Step 6: Verifying sync state..."
+log "Step 7: Syncing completed tasks from Things..."
+
+# Read completed tasks from Things
+completed_tasks=$(osascript "${SCRIPT_DIR}/read-things-completed.applescript" 2>/dev/null)
+
+if [ -n "$completed_tasks" ] && [ "$completed_tasks" != "[]" ]; then
+    # Send to worker to mark as completed in Todoist
+    sync_response=$(curl -s -X POST "${WORKER_URL}/things/sync-completed" \
+        -H "Content-Type: application/json" \
+        -d "$completed_tasks")
+    
+    completed_count=$(echo "$sync_response" | jq '[.results[] | select(.status == "completed")] | length // 0')
+    log "  Marked $completed_count tasks as completed in Todoist"
+else
+    log "  No recently completed tasks to sync"
+fi
+
+# STEP 8: Final verification
+log ""
+log "Step 8: Verifying sync state..."
 
 verify_response=$(curl -s "${WORKER_URL}/sync/verify")
 is_healthy=$(echo "$verify_response" | jq -r '.summary.isHealthy')
